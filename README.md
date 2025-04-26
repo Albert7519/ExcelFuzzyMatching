@@ -19,13 +19,21 @@
 pip install -r requirements.txt
 ```
 
-### 2. 启动开发服务器
+### 2. 初始化数据库
+
+由于项目使用了数据库模型来存储处理记录和学习模式，首次运行或模型更新后需要进行数据库迁移：
+
+```bash
+python manage.py migrate
+```
+
+### 3. 启动开发服务器
 
 ```bash
 python manage.py runserver
 ```
 
-### 3. 访问
+### 4. 访问
 
 在浏览器中打开 [http://127.0.0.1:8000/excel/](http://127.0.0.1:8000/excel/)
 
