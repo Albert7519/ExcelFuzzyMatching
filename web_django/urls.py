@@ -27,8 +27,10 @@ urlpatterns = [
     path("excel/", include("excel_matcher.urls")),
     path("admin/", admin.site.urls),
 ]
+# 移除 if settings.DEBUG: 条件，让 runserver 在 DEBUG=False 时也能服务静态/媒体文件（仅限开发测试！）
 urlpatterns += staticfiles_urlpatterns()
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# 添加媒体文件服务
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# 原来的代码：
+# if settings.DEBUG:
+#     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
