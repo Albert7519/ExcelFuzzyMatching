@@ -24,10 +24,47 @@
             <div id="upload-loader" class="loader hidden"></div>
         </div>
         
+        <div class="section hidden" id="mode-section">
+            <h2>第二步：选择处理模式</h2>
+            <div class="mode-container">
+                <div class="mode-selector">
+                    <label>
+                        <input type="radio" name="processing-mode" value="SELF_LEARNING" checked>
+                        <span class="mode-name">自学习标准化模式</span>
+                        <p class="mode-desc">系统自动学习每列中的数据规律，找出模式并进行标准化处理。适合处理格式统一但有细微差异的数据。</p>
+                    </label>
+                    <label>
+                        <input type="radio" name="processing-mode" value="REFERENCE">
+                        <span class="mode-name">参照标准匹配模式</span>
+                        <p class="mode-desc">从已有数据中选择一列作为标准参照，其他列的数据与标准列进行匹配。适合有明确标准数据来源的场景。</p>
+                    </label>
+                </div>
+                <button id="mode-continue-btn" class="continue-btn">继续</button>
+            </div>
+        </div>
+        
         <div class="section hidden" id="columns-section">
-            <h2>第二步：选择需要模糊匹配的列</h2>
-            <p>请选择需要进行模糊匹配的列（可多选）：</p>
-            <div id="columns-list" class="columns-list"></div>
+            <h2>第三步：选择需要模糊匹配的列</h2>
+            
+            <!-- 自学习模式下显示 -->
+            <div id="self-learning-columns" class="mode-specific">
+                <p>请选择需要进行模糊匹配的列（可多选）：</p>
+                <div id="columns-list" class="columns-list"></div>
+            </div>
+            
+            <!-- 参照标准模式下显示 -->
+            <div id="reference-columns" class="mode-specific hidden">
+                <div class="reference-selection">
+                    <p>请先选择作为标准的参照列：</p>
+                    <select id="reference-column-select">
+                        <option value="">-- 请选择 --</option>
+                    </select>
+                </div>
+                <div class="match-selection">
+                    <p>请选择需要匹配的列（可多选）：</p>
+                    <div id="match-columns-list" class="columns-list"></div>
+                </div>
+            </div>
             
             <div class="threshold-setting">
                 <label for="threshold">模糊匹配阈值 (0-100):</label>
@@ -42,7 +79,7 @@
         </div>
         
         <div class="section hidden" id="download-section">
-            <h2>第三步：下载处理后的文件</h2>
+            <h2>最后一步：下载处理后的文件</h2>
             <p>处理完成！处理后的文件会在选择的每一列右侧添加标准化结果列。</p>
             <a href="{% url 'excel_matcher:download_file' %}" class="button" id="download-btn">下载结果文件</a>
         </div>

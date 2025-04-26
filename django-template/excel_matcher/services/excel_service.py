@@ -7,65 +7,87 @@ from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from ..models import FuzzyMatchPattern
 
+
 class FuzzyMatcher:
     """模糊匹配处理器，负责学习匹配模式并应用到新数据"""
-    
-    def __init__(self, column_name=None):
+
+    def __init__(self, column_name=None, reference_values=None):
         self.patterns = {}  # 存储学习到的模式
         self.column_name = column_name
-        
+
         # 如果有列名，从数据库加载已学习的模式
-        if column_name:
+        if column_name and not reference_values:
             self.load_patterns_from_db()
-    
+
+        # 如果提供了参照标准值，直接加载
+        if reference_values is not None:
+            self.load_reference_values(reference_values)
+
+    def load_reference_values(self, reference_values):
+        """加载参照标准值作为匹配模式"""
+        for value in reference_values:
+            if not isinstance(value, str) or not value.strip():
+                continue
+
+            # 清理值并存储原始形式
+            cleaned_value = value.strip().upper()
+            self.patterns[cleaned_value] = value
+
+            # 同时存储签名形式
+            alpha_part = re.sub(r"[^A-Za-z]", "", cleaned_value)
+            numeric_part = re.sub(r"[^0-9]", "", cleaned_value)
+            signature = f"{alpha_part}_{numeric_part}"
+            if signature not in self.patterns:
+                self.patterns[signature] = value
+
     def load_patterns_from_db(self):
         """从数据库加载该列已有的匹配模式"""
         patterns = FuzzyMatchPattern.objects.filter(column_name=self.column_name)
-        
+
         for pattern in patterns:
             self.patterns[pattern.original_pattern] = pattern.standardized_value
-    
+
     def learn_patterns(self, column_data):
         """从现有数据中学习匹配模式"""
         unique_values = column_data.dropna().unique()
-        
+
         for value in unique_values:
             if not isinstance(value, str):
                 continue
-                
+
             # 清理值：去除空格，并转为大写用于匹配
             cleaned_value = value.strip().upper()
-            
+
             # 规则提取：提取字母部分和数字部分
-            alpha_part = re.sub(r'[^A-Za-z]', '', cleaned_value)
-            numeric_part = re.sub(r'[^0-9]', '', cleaned_value)
-            
+            alpha_part = re.sub(r"[^A-Za-z]", "", cleaned_value)
+            numeric_part = re.sub(r"[^0-9]", "", cleaned_value)
+
             # 创建规范化的"签名"
             signature = f"{alpha_part}_{numeric_part}"
-            
+
             # 如果这个签名已经存在，我们保留最先出现的值作为标准形式
             if signature not in self.patterns:
                 self.patterns[signature] = value
-            
+
             # 同时，我们也将原始的大写形式作为键存储，方便直接匹配
             if cleaned_value not in self.patterns:
                 self.patterns[cleaned_value] = value
-            
+
         # 学习完成后，保存到数据库
         if self.column_name:
             self.save_patterns_to_db()
-            
+
         return self.patterns
-    
+
     def save_patterns_to_db(self):
         """保存学习到的模式到数据库"""
         for original, standardized in self.patterns.items():
             FuzzyMatchPattern.objects.update_or_create(
                 column_name=self.column_name,
                 original_pattern=original,
-                defaults={'standardized_value': standardized}
+                defaults={"standardized_value": standardized},
             )
-    
+
     def match(self, value, threshold=80):
         """
         对给定值进行模糊匹配
@@ -75,56 +97,54 @@ class FuzzyMatcher:
         """
         if not isinstance(value, str) or not value.strip():
             return value
-        
+
         cleaned_value = value.strip().upper()
-        
+
         # 1. 直接匹配
         if cleaned_value in self.patterns:
             return self.patterns[cleaned_value]
-        
+
         # 2. 签名匹配
-        alpha_part = re.sub(r'[^A-Za-z]', '', cleaned_value)
-        numeric_part = re.sub(r'[^0-9]', '', cleaned_value)
+        alpha_part = re.sub(r"[^A-Za-z]", "", cleaned_value)
+        numeric_part = re.sub(r"[^0-9]", "", cleaned_value)
         signature = f"{alpha_part}_{numeric_part}"
-        
+
         if signature in self.patterns:
             return self.patterns[signature]
-        
+
         # 3. 模糊匹配
         if self.patterns:
             match, score, _ = process.extractOne(
-                cleaned_value, 
-                list(self.patterns.keys()),
-                scorer=fuzz.ratio
+                cleaned_value, list(self.patterns.keys()), scorer=fuzz.ratio
             )
-            
+
             if score >= threshold:
                 return self.patterns[match]
-        
+
         # 如果没有匹配或匹配度低于阈值，返回原始值
         return value
 
 
 class ExcelService:
     """处理Excel文件上传、处理和下载的服务"""
-    
-    UPLOAD_DIR = 'uploads'
-    PROCESSED_DIR = 'processed'
-    
+
+    UPLOAD_DIR = "uploads"
+    PROCESSED_DIR = "processed"
+
     def __init__(self):
         # 确保上传和处理目录存在
         self.upload_path = os.path.join(settings.MEDIA_ROOT, self.UPLOAD_DIR)
         self.processed_path = os.path.join(settings.MEDIA_ROOT, self.PROCESSED_DIR)
         os.makedirs(self.upload_path, exist_ok=True)
         os.makedirs(self.processed_path, exist_ok=True)
-        
+
         self.fs = FileSystemStorage(location=self.upload_path)
-    
+
     def save_uploaded_file(self, file):
         """保存上传的Excel文件并返回文件路径"""
         filename = self.fs.save(file.name, file)
         return os.path.join(self.upload_path, filename)
-    
+
     def get_excel_columns(self, filepath):
         """获取Excel文件的列名"""
         try:
@@ -132,54 +152,145 @@ class ExcelService:
             return df.columns.tolist()
         except Exception as e:
             raise ValueError(f"无法读取Excel文件: {str(e)}")
-    
-    def process_excel_file(self, filepath, columns_to_match, threshold=80):
+
+    def process_excel_file(
+        self,
+        filepath,
+        columns_to_match,
+        threshold=80,
+        processing_mode="SELF_LEARNING",
+        reference_column=None,
+    ):
         """
-        处理Excel文件，对指定列进行模糊匹配
-        
+        处理Excel文件，根据选择的模式进行模糊匹配
+
         Args:
             filepath: Excel文件路径
             columns_to_match: 需要模糊匹配的列名列表
             threshold: 模糊匹配的阈值
-            
+            processing_mode: 处理模式，'SELF_LEARNING'(自学习) 或 'REFERENCE'(参照标准)
+            reference_column: 标准参照列名称，仅在参照标准模式下使用
+
         Returns:
             处理后的文件路径
         """
+        if processing_mode == "REFERENCE" and (
+            not reference_column or reference_column not in columns_to_match
+        ):
+            raise ValueError("参照标准匹配模式需要指定一个有效的标准列")
+
+        if processing_mode == "SELF_LEARNING":
+            return self.process_with_self_learning(
+                filepath, columns_to_match, threshold
+            )
+        else:
+            # 从列表中移除标准列，因为它不需要被匹配
+            match_columns = [col for col in columns_to_match if col != reference_column]
+            return self.process_with_reference_column(
+                filepath, reference_column, match_columns, threshold
+            )
+
+    def process_with_self_learning(self, filepath, columns_to_match, threshold=80):
+        """使用自学习模式处理Excel文件"""
         try:
             # 读取Excel文件
             df = pd.read_excel(filepath)
-            
+
             # 对每个选中的列进行模糊匹配
             for column in columns_to_match:
                 if column in df.columns:
                     # 创建匹配器并学习模式
                     matcher = FuzzyMatcher(column_name=column)
                     matcher.learn_patterns(df[column])
-                    
+
                     # 新列名：原列名_标准
                     std_column_name = f"{column}_标准"
-                    
+
                     # 应用模糊匹配
                     df[std_column_name] = df[column].apply(
                         lambda x: matcher.match(x, threshold)
                     )
-                    
+
                     # 将新列插入到原列右侧
                     column_index = df.columns.get_loc(column)
                     columns = df.columns.tolist()
                     columns.remove(std_column_name)
                     columns.insert(column_index + 1, std_column_name)
                     df = df[columns]
-            
+
             # 生成输出文件名
             basename = os.path.basename(filepath)
             name, ext = os.path.splitext(basename)
-            output_filepath = os.path.join(self.processed_path, f"{name}_processed{ext}")
-            
+            output_filepath = os.path.join(
+                self.processed_path, f"{name}_processed{ext}"
+            )
+
             # 保存处理后的文件
             df.to_excel(output_filepath, index=False)
-            
+
             return output_filepath
-            
+
+        except Exception as e:
+            raise ValueError(f"处理Excel文件时发生错误: {str(e)}")
+
+    def process_with_reference_column(
+        self, filepath, reference_column, columns_to_match, threshold=80
+    ):
+        """
+        使用参照标准列匹配模式处理Excel文件
+
+        Args:
+            filepath: Excel文件路径
+            reference_column: 作为标准的参照列名
+            columns_to_match: 需要匹配的列名列表
+            threshold: 模糊匹配的阈值
+
+        Returns:
+            处理后的文件路径
+        """
+        try:
+            # 读取Excel文件
+            df = pd.read_excel(filepath)
+
+            # 确认标准列存在
+            if reference_column not in df.columns:
+                raise ValueError(f"标准参照列 '{reference_column}' 不存在")
+
+            # 获取标准列的唯一值作为匹配标准
+            standard_values = df[reference_column].dropna().unique()
+
+            # 创建基于标准列的匹配器
+            matcher = FuzzyMatcher(reference_values=standard_values)
+
+            # 对每个选中的列进行模糊匹配
+            for column in columns_to_match:
+                if column in df.columns:
+                    # 新列名：原列名_标准匹配
+                    std_column_name = f"{column}_标准匹配"
+
+                    # 应用模糊匹配，将每个值与标准列值进行匹配
+                    df[std_column_name] = df[column].apply(
+                        lambda x: matcher.match(x, threshold)
+                    )
+
+                    # 将新列插入到原列右侧
+                    column_index = df.columns.get_loc(column)
+                    columns = df.columns.tolist()
+                    columns.remove(std_column_name)
+                    columns.insert(column_index + 1, std_column_name)
+                    df = df[columns]
+
+            # 生成输出文件名
+            basename = os.path.basename(filepath)
+            name, ext = os.path.splitext(basename)
+            output_filepath = os.path.join(
+                self.processed_path, f"{name}_reference_processed{ext}"
+            )
+
+            # 保存处理后的文件
+            df.to_excel(output_filepath, index=False)
+
+            return output_filepath
+
         except Exception as e:
             raise ValueError(f"处理Excel文件时发生错误: {str(e)}")
