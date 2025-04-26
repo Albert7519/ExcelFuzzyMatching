@@ -1,21 +1,83 @@
-# Django Template
+# Django Excel 模糊匹配工具
 
-This sample repo contains the recommended structure for a Python Django project. In this sample, we use `django` to build a web application and the `unittest` to run tests.
+本项目是一个基于 Django 的 Web 应用，支持 Excel 文件的模糊匹配、标准化处理与高亮标记。适用于数据清洗、批量标准化等场景。
 
-For a more in-depth tutorial, see our [Django tutorial](https://code.visualstudio.com/docs/datascience/data-science-tutorial).
+## 主要特性
 
-The code in this repo aims to follow Python style guidelines as outlined in [PEP 8](https://peps.python.org/pep-0008/).
+- 支持 Excel 文件（.xlsx/.xls）上传、模糊匹配处理与结果下载
+- 两种处理模式：自学习标准化、参照标准匹配
+- 处理后自动高亮所有被标准化的单元格
+- 支持预览匹配结果
+- 上传文件不再本地保存，仅处理和下载时生成本地文件，轻量高效
+- 处理结果文件名自动为“源文件名+_processed”
 
-## Running the Sample
+## 快速开始
 
-To successfully run this example, we recommend the following VS Code extensions:
-- [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
-- [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy)
-- [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) 
+### 1. 安装依赖
 
-- Open the template folder in VS Code (**File** > **Open Folder...**)
-- Create a Python virtual environment using the **Python: Create Environment** command found in the Command Palette (**View > Command Palette**). Ensure you install dependencies found in the `pyproject.toml` file
-- Ensure your newly created environment is selected using the **Python: Select Interpreter** command found in the Command Palette
-- Create and initialize the database by running `python manage.py migrate` in an activated terminal. 
-- Run the app using the Run and Debug view or by pressing `F5`
-- Run tests by running `python manage.py test` in an activated terminal
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 初始化数据库
+
+```bash
+python manage.py migrate
+```
+
+### 3. 启动开发服务器
+
+```bash
+python manage.py runserver
+```
+
+### 4. 访问
+
+在浏览器中打开 [http://127.0.0.1:8000/excel/](http://127.0.0.1:8000/excel/)
+
+## 目录结构说明
+
+- `excel_matcher/`：核心业务应用，包含上传、处理、预览、下载等功能
+    - `views.py`：主要视图逻辑，处理文件上传、预览、处理、下载
+    - `services/excel_service.py`：Excel 文件处理与模糊匹配算法实现
+    - `models.py`：处理记录与模式存储模型
+    - `static/`、`templates/`：前端静态资源与页面模板
+- `hello/`：示例应用（可选）
+- `media/processed/`：仅用于存放处理后的 Excel 文件，上传文件不再保存
+- `web_django/`：Django 项目配置
+- `requirements.txt`：依赖包列表
+- `manage.py`：Django 管理脚本
+
+## 使用说明
+
+1. 上传 Excel 文件（.xlsx/.xls），文件不会在本地保存，仅用于后续处理
+2. 选择处理模式：
+    - **参照标准匹配模式**：选择一列作为标准，其他列与其进行模糊匹配
+    - **自学习标准化模式**：系统自动学习每列的数据规律进行标准化
+3. 选择需要处理的列和匹配阈值，可预览标准化效果
+4. 点击“处理文件”后，系统生成处理结果文件，所有被标准化的单元格会自动高亮
+5. 点击“下载结果文件”即可获取，文件名为“源文件名+_processed”
+
+## 依赖
+
+- Django >= 5.0
+- pandas
+- openpyxl
+- rapidfuzz
+
+## 注意事项
+
+- 上传的 Excel 文件不会在本地保存，仅在处理和下载时生成临时文件
+- 处理后的文件会保存在 `media/processed/` 目录，供下载使用
+- 若需清理空间，可定期删除 `media/processed/` 下的旧文件
+- `media/uploads/` 目录已不再使用，可删除
+
+## 扩展建议
+
+- 可集成 Django REST Framework 实现 API 化
+- 支持多用户隔离与权限管理
+- 增加历史记录、任务队列、异步处理等高级功能
+
+## 联系与反馈
+
+如有建议或问题，欢迎提交 issue 或联系开发者。
