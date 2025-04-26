@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel模糊匹配工具</title>
+    <link rel="stylesheet" href="{% static 'excel_matcher/css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Excel模糊匹配处理工具</h1>
+        
+        <div class="section" id="upload-section">
+            <h2>第一步：上传Excel文件</h2>
+            <div class="upload-container">
+                <form id="upload-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="file" id="file-upload" name="file" accept=".xlsx,.xls">
+                    <button type="submit" id="upload-btn">上传文件</button>
+                </form>
+            </div>
+            <div id="upload-status" class="status hidden"></div>
+            <div id="upload-loader" class="loader hidden"></div>
+        </div>
+        
+        <div class="section hidden" id="columns-section">
+            <h2>第二步：选择需要模糊匹配的列</h2>
+            <p>请选择需要进行模糊匹配的列（可多选）：</p>
+            <div id="columns-list" class="columns-list"></div>
+            
+            <div class="threshold-setting">
+                <label for="threshold">模糊匹配阈值 (0-100):</label>
+                <input type="range" id="threshold" min="0" max="100" value="80" step="1">
+                <span id="threshold-value">80</span>
+                <p class="hint">较低的阈值匹配更宽松，较高的阈值要求更严格的相似度</p>
+            </div>
+            
+            <button id="process-btn">处理文件</button>
+            <div id="process-loader" class="loader hidden"></div>
+            <div id="process-status" class="status hidden"></div>
+        </div>
+        
+        <div class="section hidden" id="download-section">
+            <h2>第三步：下载处理后的文件</h2>
+            <p>处理完成！处理后的文件会在选择的每一列右侧添加标准化结果列。</p>
+            <a href="{% url 'excel_matcher:download_file' %}" class="button" id="download-btn">下载结果文件</a>
+        </div>
+    </div>
+    
+    <script src="{% static 'excel_matcher/js/main.js' %}"></script>
+</body>
+</html>
