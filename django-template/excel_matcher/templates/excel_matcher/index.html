@@ -73,6 +73,19 @@
                 <p class="hint">较低的阈值匹配更宽松，较高的阈值要求更严格的相似度</p>
             </div>
             
+            <!-- 新增：预览功能 -->
+            <div class="preview-container">
+                <button id="preview-btn">预览匹配结果</button>
+                <div id="preview-loader" class="loader hidden"></div>
+                <div id="preview-status" class="status hidden"></div>
+                
+                <div id="preview-results" class="preview-results hidden">
+                    <h3>匹配预览结果</h3>
+                    <p class="hint">提示：处理后会自动高亮标记所有被标准化的值</p>
+                    <div id="preview-content"></div>
+                </div>
+            </div>
+            
             <button id="process-btn">处理文件</button>
             <div id="process-loader" class="loader hidden"></div>
             <div id="process-status" class="status hidden"></div>
@@ -80,7 +93,7 @@
         
         <div class="section hidden" id="download-section">
             <h2>最后一步：下载处理后的文件</h2>
-            <p>处理完成！处理后的文件会在选择的每一列右侧添加标准化结果列。</p>
+            <p>处理完成！处理后的文件会在选择的每一列右侧添加标准化结果列，并自动用黄色高亮标记所有被标准化的值。</p>
             <a href="{% url 'excel_matcher:download_file' %}" class="button" id="download-btn">下载结果文件</a>
         </div>
     </div>

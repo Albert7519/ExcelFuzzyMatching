@@ -50,6 +50,60 @@ def upload_file(request):
 
 
 @csrf_exempt
+def preview_matching(request):
+    """预览Excel文件的匹配结果"""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            columns_to_match = data.get("columns_to_match", [])
+            threshold = int(data.get("threshold", 80))
+
+            # 获取处理模式和标准列
+            processing_mode = data.get("processing_mode", "SELF_LEARNING")
+            reference_column = data.get("reference_column")
+
+            # 从session获取上传的文件路径
+            file_path = request.session.get("uploaded_file_path")
+
+            if not file_path or not os.path.exists(file_path):
+                return JsonResponse({"error": "找不到上传的文件，请重新上传"})
+
+            if not columns_to_match:
+                return JsonResponse({"error": "请选择至少一个需要匹配的列"})
+
+            # 参照标准模式需要有有效的标准列
+            if processing_mode == "REFERENCE" and (
+                not reference_column or reference_column not in columns_to_match
+            ):
+                return JsonResponse(
+                    {"error": "参照标准匹配模式需要选择一个有效的标准列"}
+                )
+
+            # 预览处理结果
+            service = ExcelService()
+            preview_results = service.preview_matches(
+                file_path,
+                columns_to_match,
+                threshold,
+                processing_mode,
+                reference_column,
+            )
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "message": "预览生成成功",
+                    "preview_results": preview_results,
+                }
+            )
+
+        except Exception as e:
+            return JsonResponse({"error": f"生成预览时出错: {str(e)}"})
+
+    return JsonResponse({"error": "无效的请求方法"})
+
+
+@csrf_exempt
 def process_file(request):
     """处理Excel文件的模糊匹配"""
     if request.method == "POST":
