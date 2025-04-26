@@ -21,3 +21,6 @@ media/
 # Editor configuration
 .vscode/
 
+# Static files collected by collectstatic
+staticfiles/
+

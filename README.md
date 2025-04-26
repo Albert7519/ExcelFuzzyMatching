@@ -58,10 +58,43 @@ python manage.py runserver
 - pandas
 - openpyxl
 - rapidfuzz
+- whitenoise[brotli] # 用于高效提供静态文件
 
 ## 注意事项
 
 - 上传的 Excel 文件不会在本地保存，仅在处理和下载时生成临时文件
+
+## 生产环境部署与静态文件
+
+本项目使用 `whitenoise` 库来高效地提供静态文件服务，尤其是在 `DEBUG = False` 的情况下。
+
+### 静态文件处理:
+
+1.  **`settings.py` 配置**: 
+    *   确保 `whitenoise.middleware.WhiteNoiseMiddleware` 在 `MIDDLEWARE` 列表的靠前位置（通常在 `SecurityMiddleware` 之后）。
+    *   `STATIC_ROOT = BASE_DIR / 'staticfiles'` 指定了 `collectstatic` 命令收集静态文件的目标目录。
+    *   `STATICFILES_STORAGE` 推荐设置为 `whitenoise.storage.CompressedManifestStaticFilesStorage` 以获得压缩和缓存的最佳性能。
+2.  **收集静态文件**: 在部署前或 `DEBUG = False` 时，需要运行以下命令将所有应用的静态文件（包括 Django admin 的）复制到 `STATIC_ROOT` 目录：
+    ```bash
+    python manage.py collectstatic
+    ```
+    (`whitenoise` 会从 `staticfiles/` 目录提供文件)。
+
+### 部署注意事项:
+
+*   **`DEBUG`**: 在生产环境中 **必须** 设置为 `False`。
+*   **`ALLOWED_HOSTS`**: **必须** 设置为你的服务器 IP 地址或域名。
+*   **`SECRET_KEY`**: **必须** 使用一个长而随机的安全密钥，不要使用开发时的默认密钥。
+*   **数据库迁移**: 运行 `python manage.py migrate` 以确保数据库结构是最新的。
+*   **运行服务器**: 
+    *   **不要** 在生产环境中使用 `python manage.py runserver`。
+    *   应使用 WSGI 服务器（如 Gunicorn 或 uWSGI）来运行 Django 应用。例如，使用 Gunicorn：
+        ```bash
+        gunicorn web_django.wsgi:application
+        ```
+    *   (推荐) 在 WSGI 服务器前配置一个反向代理（如 Nginx 或 Apache）来处理 HTTPS、负载均衡和更高效地服务静态/媒体文件。
+
+**简而言之**: 部署时，设置好 `settings.py` 中的生产参数，运行 `collectstatic` 和 `migrate`，然后使用 Gunicorn/uWSGI 启动应用。
 
 ## 扩展建议
 
