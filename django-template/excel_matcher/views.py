@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .models import ProcessedFile
 from .services.excel_service import ExcelService
+from urllib.parse import quote  # 使用 urllib.parse.quote 替代 urlquote
 
 
 def index(request):
@@ -131,10 +132,13 @@ def preview_matching(request):
                 try:
                     os.remove(file_path)
                     # 从 session 中也移除路径，避免后续误用
-                    if "uploaded_file_path" in request.session and request.session["uploaded_file_path"] == file_path:
+                    if (
+                        "uploaded_file_path" in request.session
+                        and request.session["uploaded_file_path"] == file_path
+                    ):
                         del request.session["uploaded_file_path"]
                 except Exception:
-                    pass # Ignore errors during cleanup
+                    pass  # Ignore errors during cleanup
     return JsonResponse({"error": "无效的请求方法"})
 
 
@@ -173,7 +177,7 @@ def process_file(request):
                 reference_column,
             )
             ProcessedFile.objects.create(
-                original_file=file_path, # 记录的是临时文件路径或原始路径
+                original_file=file_path,  # 记录的是临时文件路径或原始路径
                 processed_file=processed_file_path,
                 columns_processed=columns_to_match,
                 processing_mode=processing_mode,
@@ -195,10 +199,13 @@ def process_file(request):
                 try:
                     os.remove(file_path)
                     # 从 session 中也移除路径
-                    if "uploaded_file_path" in request.session and request.session["uploaded_file_path"] == file_path:
+                    if (
+                        "uploaded_file_path" in request.session
+                        and request.session["uploaded_file_path"] == file_path
+                    ):
                         del request.session["uploaded_file_path"]
                 except Exception:
-                    pass # Ignore errors during cleanup
+                    pass  # Ignore errors during cleanup
     return JsonResponse({"error": "无效的请求方法"})
 
 
@@ -222,5 +229,8 @@ def download_file(request):
         file_data,
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response["Content-Disposition"] = f'attachment; filename="{download_filename}"'
+    # 对文件名进行 URL 编码以提高兼容性
+    encoded_filename = quote(download_filename)  # 使用 quote 替代 urlquote
+    # 设置 Content-Disposition，使用编码后的文件名
+    response["Content-Disposition"] = f'attachment; filename="{encoded_filename}"'
     return response
