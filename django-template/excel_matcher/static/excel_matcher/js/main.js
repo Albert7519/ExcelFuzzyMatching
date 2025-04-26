@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadBtn = document.getElementById('download-btn');
     
     // 状态变量
-    let currentMode = 'SELF_LEARNING'; // 默认模式
+    let currentMode = 'REFERENCE'; // 默认使用参照标准匹配模式
     let availableColumns = []; // 可用的列
     
     // 事件监听

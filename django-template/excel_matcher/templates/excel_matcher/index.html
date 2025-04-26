@@ -29,14 +29,14 @@
             <div class="mode-container">
                 <div class="mode-selector">
                     <label>
-                        <input type="radio" name="processing-mode" value="SELF_LEARNING" checked>
-                        <span class="mode-name">自学习标准化模式</span>
-                        <p class="mode-desc">系统自动学习每列中的数据规律，找出模式并进行标准化处理。适合处理格式统一但有细微差异的数据。</p>
-                    </label>
-                    <label>
-                        <input type="radio" name="processing-mode" value="REFERENCE">
+                        <input type="radio" name="processing-mode" value="REFERENCE" checked>
                         <span class="mode-name">参照标准匹配模式</span>
                         <p class="mode-desc">从已有数据中选择一列作为标准参照，其他列的数据与标准列进行匹配。适合有明确标准数据来源的场景。</p>
+                    </label>
+                    <label>
+                        <input type="radio" name="processing-mode" value="SELF_LEARNING">
+                        <span class="mode-name">自学习标准化模式</span>
+                        <p class="mode-desc">系统自动学习每列中的数据规律，找出模式并进行标准化处理。适合处理格式统一但有细微差异的数据。</p>
                     </label>
                 </div>
                 <button id="mode-continue-btn" class="continue-btn">继续</button>
@@ -68,9 +68,10 @@
             
             <div class="threshold-setting">
                 <label for="threshold">模糊匹配阈值 (0-100):</label>
-                <input type="range" id="threshold" min="0" max="100" value="80" step="1">
-                <span id="threshold-value">80</span>
+                <input type="range" id="threshold" min="0" max="100" value="0" step="1">
+                <span id="threshold-value">0</span>
                 <p class="hint">较低的阈值匹配更宽松，较高的阈值要求更严格的相似度</p>
+                <p class="hint">当值设为0时，任何细小的文本差异都会被忽略并匹配标准，当值设为100时，只匹配例如大小写、空格还有"-"号等细微格式差异</p>
             </div>
             
             <!-- 新增：预览功能 -->
