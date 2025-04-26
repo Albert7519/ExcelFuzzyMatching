@@ -1,4 +1,4 @@
-# Django Excel 模糊匹配工具
+# ExcelFuzzyMatching 模糊匹配工具
 
 本项目是一个基于 Django 的 Web 应用，支持 Excel 文件的模糊匹配、标准化处理与高亮标记。适用于数据清洗、批量标准化等场景。
 
@@ -19,19 +19,13 @@
 pip install -r requirements.txt
 ```
 
-### 2. 初始化数据库
-
-```bash
-python manage.py migrate
-```
-
-### 3. 启动开发服务器
+### 2. 启动开发服务器
 
 ```bash
 python manage.py runserver
 ```
 
-### 4. 访问
+### 3. 访问
 
 在浏览器中打开 [http://127.0.0.1:8000/excel/](http://127.0.0.1:8000/excel/)
 
@@ -68,9 +62,6 @@ python manage.py runserver
 ## 注意事项
 
 - 上传的 Excel 文件不会在本地保存，仅在处理和下载时生成临时文件
-- 处理后的文件会保存在 `media/processed/` 目录，供下载使用
-- 若需清理空间，可定期删除 `media/processed/` 下的旧文件
-- `media/uploads/` 目录已不再使用，可删除
 
 ## 扩展建议
 
