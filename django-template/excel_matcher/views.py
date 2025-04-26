@@ -85,6 +85,8 @@ def _ensure_uploaded_file_on_disk(request):
 @csrf_exempt
 def preview_matching(request):
     """预览Excel文件的匹配结果"""
+    file_path = None
+    is_temp_file = False
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -94,6 +96,8 @@ def preview_matching(request):
             reference_column = data.get("reference_column")
             # 获取本地文件路径（如无则写入临时文件）
             file_path = _ensure_uploaded_file_on_disk(request)
+            if file_path and os.path.basename(file_path).startswith("temp_"):
+                is_temp_file = True
             if not file_path or not os.path.exists(file_path):
                 return JsonResponse({"error": "找不到上传的文件，请重新上传"})
             if not columns_to_match:
@@ -121,12 +125,24 @@ def preview_matching(request):
             )
         except Exception as e:
             return JsonResponse({"error": f"生成预览时出错: {str(e)}"})
+        finally:
+            # 确保由 _ensure_uploaded_file_on_disk 创建的临时文件被删除
+            if is_temp_file and file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    # 从 session 中也移除路径，避免后续误用
+                    if "uploaded_file_path" in request.session and request.session["uploaded_file_path"] == file_path:
+                        del request.session["uploaded_file_path"]
+                except Exception:
+                    pass # Ignore errors during cleanup
     return JsonResponse({"error": "无效的请求方法"})
 
 
 @csrf_exempt
 def process_file(request):
     """处理Excel文件的模糊匹配"""
+    file_path = None
+    is_temp_file = False
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -136,6 +152,8 @@ def process_file(request):
             reference_column = data.get("reference_column")
             # 获取本地文件路径（如无则写入临时文件）
             file_path = _ensure_uploaded_file_on_disk(request)
+            if file_path and os.path.basename(file_path).startswith("temp_"):
+                is_temp_file = True
             if not file_path or not os.path.exists(file_path):
                 return JsonResponse({"error": "找不到上传的文件，请重新上传"})
             if not columns_to_match:
@@ -155,7 +173,7 @@ def process_file(request):
                 reference_column,
             )
             ProcessedFile.objects.create(
-                original_file=file_path,
+                original_file=file_path, # 记录的是临时文件路径或原始路径
                 processed_file=processed_file_path,
                 columns_processed=columns_to_match,
                 processing_mode=processing_mode,
@@ -171,6 +189,16 @@ def process_file(request):
             )
         except Exception as e:
             return JsonResponse({"error": f"处理文件时出错: {str(e)}"})
+        finally:
+            # 确保由 _ensure_uploaded_file_on_disk 创建的临时文件被删除
+            if is_temp_file and file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    # 从 session 中也移除路径
+                    if "uploaded_file_path" in request.session and request.session["uploaded_file_path"] == file_path:
+                        del request.session["uploaded_file_path"]
+                except Exception:
+                    pass # Ignore errors during cleanup
     return JsonResponse({"error": "无效的请求方法"})
 
 

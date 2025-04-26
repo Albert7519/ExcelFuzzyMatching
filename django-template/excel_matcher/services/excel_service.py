@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 import os
+import time
 from rapidfuzz import process, fuzz
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
@@ -354,6 +355,7 @@ class ExcelService:
 
     def process_with_self_learning(self, filepath, columns_to_match, threshold=80):
         """使用自学习模式处理Excel文件"""
+        temp_filepath = None
         try:
             # 读取Excel文件
             df = pd.read_excel(filepath)
@@ -406,14 +408,20 @@ class ExcelService:
             # 使用openpyxl添加样式
             self._add_highlighting(temp_filepath, output_filepath, changes)
 
-            # 删除临时文件
-            if os.path.exists(temp_filepath):
-                os.remove(temp_filepath)
-
             return output_filepath
 
         except Exception as e:
             raise ValueError(f"处理Excel文件时发生错误: {str(e)}")
+
+        finally:
+            # 确保临时文件被删除
+            if temp_filepath and os.path.exists(temp_filepath):
+                for _ in range(3):
+                    try:
+                        os.remove(temp_filepath)
+                        break
+                    except Exception:
+                        time.sleep(0.2)
 
     def process_with_reference_column(
         self, filepath, reference_column, columns_to_match, threshold=80
@@ -430,6 +438,7 @@ class ExcelService:
         Returns:
             处理后的文件路径
         """
+        temp_filepath = None
         try:
             # 读取Excel文件
             df = pd.read_excel(filepath)
@@ -488,14 +497,20 @@ class ExcelService:
             # 使用openpyxl添加样式
             self._add_highlighting(temp_filepath, output_filepath, changes)
 
-            # 删除临时文件
-            if os.path.exists(temp_filepath):
-                os.remove(temp_filepath)
-
             return output_filepath
 
         except Exception as e:
             raise ValueError(f"处理Excel文件时发生错误: {str(e)}")
+
+        finally:
+            # 确保临时文件被删除
+            if temp_filepath and os.path.exists(temp_filepath):
+                for _ in range(3):
+                    try:
+                        os.remove(temp_filepath)
+                        break
+                    except Exception:
+                        time.sleep(0.2)
 
     def _add_highlighting(self, input_file, output_file, changes):
         """为已处理的Excel文件添加黄色高亮标记"""
@@ -523,3 +538,4 @@ class ExcelService:
 
         # 保存带有样式的工作簿
         workbook.save(output_file)
+        workbook.close()
